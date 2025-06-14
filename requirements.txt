@@ -1,5 +1,5 @@
-fastapi==0.104.1
-uvicorn==0.24.0
+fastapi==0.95.2  # Use a version compatible with Python 3.13
+uvicorn==0.22.0  # Use a version compatible with Python 3.13
 python-dotenv==1.0.0
 sqlalchemy==1.4.41  # Use SQLAlchemy 1.x for Python 3.13 compatibility
 pydantic==1.10.13  # Use a version compatible with Python 3.13
