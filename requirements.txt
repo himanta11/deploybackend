@@ -1,8 +1,9 @@
-fastapi==0.95.2
+fastapi>=0.111.0
+pydantic>=2.0.0
 uvicorn==0.24.0
 python-dotenv==1.0.0
 sqlalchemy==2.0.23
-pydantic==1.10.13
+
 
 pydantic[email]
 python-jose[cryptography]==3.3.0
