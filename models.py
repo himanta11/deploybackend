@@ -7,11 +7,99 @@ from passlib.context import CryptContext
 import logging
 import enum
 from datetime import datetime
+from pydantic import BaseModel
+from typing import Optional, List
 
 logger = logging.getLogger(__name__)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# Pydantic schemas
+class UserProgressSchema(BaseModel):
+    id: int
+    user_id: int
+    question_id: int
+    correct: int  # Changed from is_correct to correct
+    time_taken: Optional[float] = None
+    attempted_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class UserSchema(BaseModel):
+    id: int
+    email: str
+    username: str
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class QuestionSchema(BaseModel):
+    id: int
+    question_text: str
+    option_a: str
+    option_b: str
+    option_c: str
+    option_d: str
+    correct_answer: str
+    explanation: Optional[str] = None
+    has_diagram: bool
+    diagram_description: Optional[str] = None
+    year: int
+    exam_type: str
+    exam_stage: str
+    subject: str
+    topic: Optional[str] = None
+    difficulty_level: str
+    source: Optional[str] = None
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class TagSchema(BaseModel):
+    id: int
+    name: str
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class QuestionTagSchema(BaseModel):
+    question_id: int
+    tag_id: int
+    created_at: datetime
+
+    class Config:
+        orm_mode = True
+
+class QuestionStatisticsSchema(BaseModel):
+    question_id: int
+    total_attempts: int
+    correct_attempts: int
+    average_time: float
+    last_updated: datetime
+
+    class Config:
+        orm_mode = True
+
+class QuestionImageSchema(BaseModel):
+    id: int
+    question_id: int
+    image_path: str
+    image_type: Optional[str] = None
+    caption: Optional[str] = None
+    display_order: int
+    created_at: datetime
+    updated_at: datetime
+
+    class Config:
+        orm_mode = True
+
+# SQLAlchemy models
 class ExamType(enum.Enum):
     NTPC = "NTPC"
     GROUP_D = "GROUP D"
@@ -99,6 +187,15 @@ class User(Base):
             logger.error(f"Error verifying password: {str(e)}")
             return False
 
+    def to_schema(self):
+        return UserSchema(
+            id=self.id,
+            email=self.email,
+            username=self.username,
+            created_at=self.created_at,
+            updated_at=self.updated_at
+        )
+
 class Question(Base):
     __tablename__ = "questions"
 
@@ -127,68 +224,3 @@ class Question(Base):
     source = Column(String(255))  # Source of the question (e.g., "Previous Year Paper", "Practice Set")
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    tags = relationship("QuestionTag", back_populates="question")
-    images = relationship("QuestionImage", back_populates="question")
-
-class Tag(Base):
-    __tablename__ = "tags"
-
-    id = Column(Integer, primary_key=True, index=True)
-    name = Column(String(50), unique=True, nullable=False)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    questions = relationship("QuestionTag", back_populates="tag")
-
-class QuestionTag(Base):
-    __tablename__ = "question_tags"
-
-    question_id = Column(Integer, ForeignKey("questions.id"), primary_key=True)
-    tag_id = Column(Integer, ForeignKey("tags.id"), primary_key=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    question = relationship("Question", back_populates="tags")
-    tag = relationship("Tag", back_populates="questions")
-
-class UserProgress(Base):
-    __tablename__ = "user_progress"
-
-    id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, nullable=False)  # Foreign key to your user table
-    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
-    is_correct = Column(Integer, nullable=False)  # 1 for correct, 0 for incorrect
-    time_taken = Column(Float)  # Time taken to answer in seconds
-    attempted_at = Column(DateTime, default=datetime.utcnow)
-
-    # Relationships
-    question = relationship("Question")
-
-class QuestionStatistics(Base):
-    __tablename__ = "question_statistics"
-
-    question_id = Column(Integer, ForeignKey("questions.id"), primary_key=True)
-    total_attempts = Column(Integer, default=0)
-    correct_attempts = Column(Integer, default=0)
-    average_time = Column(Float, default=0.0)
-    last_updated = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    question = relationship("Question")
-
-class QuestionImage(Base):
-    __tablename__ = "question_images"
-
-    id = Column(Integer, primary_key=True, index=True)
-    question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
-    image_path = Column(String(255), nullable=False)  # Path to the stored image
-    image_type = Column(String(50))  # Type of image (e.g., "diagram", "graph", "table")
-    caption = Column(Text)  # Optional caption for the image
-    display_order = Column(Integer, default=0)  # Order in which to display multiple images
-    created_at = Column(DateTime, default=datetime.utcnow)
-    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-
-    # Relationships
-    question = relationship("Question", back_populates="images")
